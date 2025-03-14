@@ -1,10 +1,13 @@
 import "./style.css";
+import "../node_modules/@xterm/xterm/css/xterm.css";
 import { WebContainer } from "@webcontainer/api";
+import { Terminal } from "@xterm/xterm";
 import * as monaco from "monaco-editor";
 
 let webcontainerInstance: WebContainer;
 let editor: monaco.editor.IStandaloneCodeEditor;
 let currentFilePath: string | null = null;
+const terminal = new Terminal();
 
 const files = {
 	"index.js": {
@@ -49,6 +52,10 @@ app.listen(port, () => {
 };
 
 function initMonaco() {
+	const terminalNode = document.getElementById("terminal");
+	if (!terminalNode) throw new Error("Terminal element not found");
+	terminal.open(terminalNode);
+
 	const node = document.getElementById("editor-container");
 	if (!node) throw new Error("Editor container element not found");
 
@@ -56,7 +63,6 @@ function initMonaco() {
 		value: files["index.js"].file.contents,
 		language: "javascript",
 		theme: "vs-dark",
-		automaticLayout: true,
 	});
 
 	currentFilePath = "index.js";
@@ -76,14 +82,9 @@ async function initWebContainer() {
 
 		await webcontainerInstance.mount(files);
 
-		const terminal = document.getElementById("terminal");
-		const terminalOutput = document.createElement("div");
-		if (!terminal) throw new Error("Terminal element not found");
 		const preview = document.getElementById("preview");
 		if (!(preview instanceof HTMLIFrameElement))
 			throw new Error("Preview element not found");
-
-		terminal.appendChild(terminalOutput);
 
 		webcontainerInstance.on("server-ready", (_port, url) => {
 			appendToTerminal(`Server running at ${url}`);
@@ -203,14 +204,12 @@ async function installPackages() {
 	}
 }
 
-function appendToTerminal(text: string) {
-	const terminal = document.getElementById("terminal");
-	if (!terminal) throw new Error("Terminal element not found");
-	const line = document.createElement("div");
-	line.textContent = typeof text === "string" ? text : JSON.stringify(text);
-	terminal.appendChild(line);
-	terminal.scrollTop = terminal.scrollHeight;
+function appendToTerminal(text: string | Uint8Array) {
+	if (!terminal) throw new Error("Terminal not found");
+	terminal.write(text);
 }
 
-initMonaco();
-await initWebContainer();
+window.addEventListener("load", async () => {
+	initMonaco();
+	await initWebContainer();
+});

@@ -11,6 +11,9 @@ importers:
       '@webcontainer/api':
         specifier: 1.5.1-internal.9
         version: 1.5.1-internal.9
+      '@xterm/xterm':
+        specifier: ^5.5.0
+        version: 5.5.0
       monaco-editor:
         specifier: ^0.52.2
         version: 0.52.2
@@ -21,6 +24,9 @@ importers:
       vite:
         specifier: ^6.2.0
         version: 6.2.1
+      vite-plugin-monaco-editor:
+        specifier: ^1.1.0
+        version: 1.1.0(monaco-editor@0.52.2)
 
 packages:
 
@@ -275,6 +281,9 @@ packages:
   '@webcontainer/api@1.5.1-internal.9':
     resolution: {integrity: sha512-l5cR4pzGwe+ZnR+HFKtz5Rq6JntSqay5ivX/LHoaf4vmTv8lYbNK0FQDPsXSd6Ual6F95eofCUJkyExDqK7Ozw==}
 
+  '@xterm/xterm@5.5.0':
+    resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
+
   esbuild@0.25.1:
     resolution: {integrity: sha512-BGO5LtrGC7vxnqucAe/rmvKdJllfGaYWdyABvyMoXQlfYMb2bbRuReWR5tEGE//4LcNJj9XrkovTqNYRFZHAMQ==}
     engines: {node: '>=18'}
@@ -313,6 +322,11 @@ packages:
     resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  vite-plugin-monaco-editor@1.1.0:
+    resolution: {integrity: sha512-IvtUqZotrRoVqwT0PBBDIZPNraya3BxN/bfcNfnxZ5rkJiGcNtO5eAOWWSgT7zullIAEqQwxMU83yL9J5k7gww==}
+    peerDependencies:
+      monaco-editor: '>=0.33.0'
 
   vite@6.2.1:
     resolution: {integrity: sha512-n2GnqDb6XPhlt9B8olZPrgMD/es/Nd1RdChF6CBD/fHW6pUyUTt2sQW2fPRX5GiD9XEa6+8A6A4f2vT6pSsE7Q==}
@@ -492,6 +506,8 @@ snapshots:
 
   '@webcontainer/api@1.5.1-internal.9': {}
 
+  '@xterm/xterm@5.5.0': {}
+
   esbuild@0.25.1:
     optionalDependencies:
       '@esbuild/aix-ppc64': 0.25.1
@@ -563,6 +579,10 @@ snapshots:
   source-map-js@1.2.1: {}
 
   typescript@5.7.3: {}
+
+  vite-plugin-monaco-editor@1.1.0(monaco-editor@0.52.2):
+    dependencies:
+      monaco-editor: 0.52.2
 
   vite@6.2.1:
     dependencies:
