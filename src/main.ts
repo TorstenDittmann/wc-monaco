@@ -1,13 +1,18 @@
 import "./style.css";
 import "../node_modules/@xterm/xterm/css/xterm.css";
 import { WebContainer } from "@webcontainer/api";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import * as monaco from "monaco-editor";
 
 let webcontainerInstance: WebContainer;
 let editor: monaco.editor.IStandaloneCodeEditor;
 let currentFilePath: string | null = null;
-const terminal = new Terminal();
+const terminal = new Terminal({});
+const fitAddon = new FitAddon();
+terminal.loadAddon(fitAddon);
+terminal.loadAddon(new WebLinksAddon());
 
 const files = {
 	"index.js": {
@@ -71,14 +76,50 @@ function initMonaco() {
 		if (currentFilePath && webcontainerInstance) {
 			const content = editor.getValue();
 			await webcontainerInstance.fs.writeFile(currentFilePath, content);
-			appendToTerminal(`File ${currentFilePath} saved`);
+			console.log(`File ${currentFilePath} saved`);
 		}
 	});
 }
 
 async function initWebContainer() {
 	try {
-		webcontainerInstance = await WebContainer.boot();
+		webcontainerInstance = await WebContainer.boot({
+			workdirName: "my-workdir",
+		});
+		const shellProcess = await webcontainerInstance.spawn("jsh", {
+			terminal: {
+				cols: terminal.cols,
+				rows: terminal.rows,
+			},
+		});
+		fitAddon.fit();
+		// Wire up the terminal to the shell process
+		shellProcess.output.pipeTo(
+			new WritableStream({
+				write(data) {
+					terminal.write(data);
+				},
+			}),
+		);
+
+		const writer = shellProcess.input.getWriter();
+		terminal.onData((data) => {
+			writer.write(data);
+		});
+
+		// Make sure to release the writer when done (if the terminal is closed)
+		const cleanup = () => writer.releaseLock();
+		window.addEventListener("beforeunload", cleanup);
+
+		// Listen to terminal resize events
+		terminal.onResize(({ cols, rows }) => {
+			if (shellProcess?.resize) {
+				shellProcess.resize({
+					cols,
+					rows,
+				});
+			}
+		});
 
 		await webcontainerInstance.mount(files);
 
@@ -87,24 +128,15 @@ async function initWebContainer() {
 			throw new Error("Preview element not found");
 
 		webcontainerInstance.on("server-ready", (_port, url) => {
-			appendToTerminal(`Server running at ${url}`);
+			console.log(`Server running at ${url}`);
 			preview.src = url.toString();
 		});
 
 		await updateFileExplorer();
-
-		document
-			.getElementById("run-btn")
-			?.addEventListener("click", runProject);
-		document
-			.getElementById("install-btn")
-			?.addEventListener("click", installPackages);
 	} catch (error) {
 		if (error instanceof Error) {
 			console.error("WebContainer initialization error:", error);
-			appendToTerminal(
-				`Error initializing WebContainer: ${error.message}`,
-			);
+			console.log(`Error initializing WebContainer: ${error.message}`);
 		}
 	}
 }
@@ -119,7 +151,7 @@ async function updateFileExplorer() {
 		withFileTypes: true,
 	});
 
-	fileList.forEach((file) => {
+	for (const file of fileList) {
 		const fileElement = document.createElement("div");
 		fileElement.textContent = file.name;
 		fileElement.style.padding = "5px";
@@ -151,62 +183,15 @@ async function updateFileExplorer() {
 				await updateFileExplorer();
 			} catch (error) {
 				if (error instanceof Error) {
-					appendToTerminal(`Error opening file: ${error.message}`);
+					console.log(`Error opening file: ${error.message}`);
 				} else {
-					appendToTerminal(`Error opening file: ${error}`);
+					console.log(`Error opening file: ${error}`);
 				}
 			}
 		});
 
 		explorer.appendChild(fileElement);
-	});
-}
-
-async function runProject() {
-	appendToTerminal("Running project...");
-
-	try {
-		const output = await webcontainerInstance.spawn("npm", ["start"]);
-		output.output.pipeTo(
-			new WritableStream({
-				write(data) {
-					appendToTerminal(data);
-				},
-			}),
-		);
-	} catch (error) {
-		if (error instanceof Error) {
-			appendToTerminal(`Error running project: ${error.message}`);
-		} else {
-			appendToTerminal(`Error running project: ${error}`);
-		}
 	}
-}
-
-async function installPackages() {
-	appendToTerminal("Installing packages...");
-
-	try {
-		const output = await webcontainerInstance.spawn("npm", ["install"]);
-		output.output.pipeTo(
-			new WritableStream({
-				write(data) {
-					appendToTerminal(data);
-				},
-			}),
-		);
-	} catch (error) {
-		if (error instanceof Error) {
-			appendToTerminal(`Error installing packages: ${error.message}`);
-		} else {
-			appendToTerminal(`Error installing packages: ${error}`);
-		}
-	}
-}
-
-function appendToTerminal(text: string | Uint8Array) {
-	if (!terminal) throw new Error("Terminal not found");
-	terminal.write(text);
 }
 
 window.addEventListener("load", async () => {
